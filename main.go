@@ -31,7 +31,7 @@ func launchFromArg(arg string) {
 }
 
 func main() {
-	depth := flag.Int("d", 2, "depth to search workspaces")
+	depth := flag.Int("d", 3, "depth to search workspaces")
 	flag.Parse()
 	chosenDir := flag.Arg(0)
 	if len(chosenDir) > 0 {
