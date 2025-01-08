@@ -33,7 +33,7 @@ func launchFromArg(arg string) {
 
 func main() {
 	depth := flag.Int("d", 3, "depth to search workspaces")
-	parallelDepth := flag.Int("p", 1, "depth at which to start concurrently searching workspaces")
+	parallelDepth := flag.Int("p", 1, "depth at which to start searching workspaces in parallel")
 	flag.Parse()
 	chosenDir := flag.Arg(0)
 	if len(chosenDir) > 0 {
@@ -46,7 +46,7 @@ func main() {
 	}
 
 	if !ValidateDepth(*depth, *parallelDepth) {
-		fmt.Fprintln(os.Stderr, "specified depth must be zero or strictly less than the parallel depth!")
+		fmt.Fprintf(os.Stderr, "specified depth, %v, must be zero or strictly less than the parallel depth, %v!\n", *depth, *parallelDepth)
 		os.Exit(1)
 	}
 
