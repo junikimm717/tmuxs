@@ -40,21 +40,32 @@ func ShouldIgnoreDir(name string) bool {
 }
 
 type Entry struct {
-	Path  string
-	Depth int
+	Path    string
+	AbsPath string
+	Depth   int
 }
 
-func sendDirEntries(channel chan string, f fs.FS, prefix string, root string, depth int) {
+type SendEntriesParams struct {
+	Fs              fs.FS
+	Prefix          string
+	Root            string
+	DontIncludeRoot bool
+	Depth           int
+}
+
+func sendDirEntries(channel chan string, params SendEntriesParams) []Entry {
 	queue := []Entry{
-		{Path: root, Depth: 0},
+		{Path: params.Root, Depth: 0, AbsPath: filepath.Join(params.Prefix, params.Root)},
 	}
 	ptr := 0
 	for ptr < len(queue) {
 		cur := queue[ptr]
 		ptr++
-		channel <- filepath.Join(prefix, cur.Path)
+		if cur.Depth != 0 || !params.DontIncludeRoot {
+			channel <- cur.AbsPath
+		}
 
-		if depth != 0 && cur.Depth >= depth {
+		if cur.Depth >= params.Depth {
 			continue
 		}
 
@@ -62,7 +73,7 @@ func sendDirEntries(channel chan string, f fs.FS, prefix string, root string, de
 		if len(cur.Path) == 0 {
 			query = "."
 		}
-		dirEntries, err := fs.ReadDir(f, query)
+		dirEntries, err := fs.ReadDir(params.Fs, query)
 		if err != nil {
 			continue
 		}
@@ -85,15 +96,21 @@ func sendDirEntries(channel chan string, f fs.FS, prefix string, root string, de
 					prefix = ""
 				}
 				queue = append(queue, Entry{
-					Path:  prefix + entry.Name(),
-					Depth: cur.Depth + 1,
+					Path:    prefix + entry.Name(),
+					Depth:   cur.Depth + 1,
+					AbsPath: filepath.Join(cur.AbsPath, entry.Name()),
 				})
 			}
 		}
 	}
+	return queue
 }
 
-func sendAllDirOptions(channel chan string, paths []string, depth int) {
+func ValidateDepth(depth int, parallelDepth int) bool {
+	return 1 <= parallelDepth && parallelDepth <= depth
+}
+
+func sendAllDirOptions(channel chan string, paths []string, depth int, parallelDepth int) {
 	pathsMap := map[string]bool{}
 	deDuplicated := make([]string, 0, len(paths))
 	for _, path := range paths {
@@ -114,7 +131,33 @@ func sendAllDirOptions(channel chan string, paths []string, depth int) {
 	for _, root := range deDuplicated {
 		wg.Add(1)
 		go func() {
-			sendDirEntries(channel, os.DirFS(root), root, "", depth)
+			wg2 := sync.WaitGroup{}
+			dirFS := os.DirFS(root)
+
+			entries := sendDirEntries(channel, SendEntriesParams{
+				Fs:     dirFS,
+				Root:   "",
+				Prefix: root,
+				Depth:  parallelDepth,
+			})
+
+			for _, entry := range entries {
+				if entry.Depth != parallelDepth || depth == parallelDepth {
+					continue
+				}
+				wg2.Add(1)
+				go func() {
+					sendDirEntries(channel, SendEntriesParams{
+						Fs:     dirFS,
+						Prefix: root,
+						Root:   entry.Path,
+						Depth:  depth - parallelDepth,
+						DontIncludeRoot: true,
+					})
+					wg2.Done()
+				}()
+			}
+			wg2.Wait()
 			wg.Done()
 		}()
 	}
