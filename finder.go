@@ -114,6 +114,10 @@ func sendAllDirOptions(channel chan string, paths []string, depth int, parallelD
 	pathsMap := map[string]bool{}
 	deDuplicated := make([]string, 0, len(paths))
 	for _, path := range paths {
+		if len(path) == 0 {
+			// almost certainly a mistake
+			continue
+		}
 		path, err := filepath.Abs(path)
 		if err != nil {
 			log.Println(err)
