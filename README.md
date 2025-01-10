@@ -9,7 +9,9 @@ because they are being searched in parallel as the fuzzy finder is loaded.
 
 ## Setup
 
-1. Install the binary. `go install github.com/junikimm717/tmuxs` works.
+1. Install the binary. `go install github.com/junikimm717/tmuxs@latest` works.
 2. Set the `WORKSPACES` environment variable as a colon-separated list of paths
    that you want to be searched by the fuzzy finder, e.g.
-   `/home/junikim/programs:/home/junikim/schoolwork`.
+   ```sh
+    export WORKSPACES="$HOME/programs:$HOME/schoolwork:$WORKSPACES"
+   ```
