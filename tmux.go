@@ -39,7 +39,7 @@ func insideTmux() bool {
 }
 
 func sessionExists(name string) bool {
-	return runTmux([]string{"has-session", "-t", name}, true) == nil
+	return runTmux([]string{"has-session", "-t=" + name}, true) == nil
 }
 
 func OpenSession(path string) error {
@@ -57,7 +57,7 @@ func OpenSession(path string) error {
 	}
 	if insideTmux() {
 		return execTmux(
-			[]string{"switch-client", "-t", name},
+			[]string{"switch-client", "-t=" + name},
 		)
 	} else {
 		return execTmux(
