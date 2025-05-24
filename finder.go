@@ -123,10 +123,11 @@ func sendAllDirOptions(channel chan string, paths []string, depth int, parallelD
 			log.Println(err)
 			continue
 		}
+		// info might be null
 		info, _ := os.Stat(path)
 		if !pathsMap[path] {
 			pathsMap[path] = true
-			if info.IsDir() {
+			if info != nil && info.IsDir() {
 				deDuplicated = append(deDuplicated, path)
 			}
 		}
